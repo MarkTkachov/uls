@@ -7,12 +7,15 @@
 #define LONG_FORMAT (16)
 #define TERM_OUTPUT (32)
 #define FORCE_NEWLINE_AFTER_PRINT (64)
+#define NO_TOTAL_LONGF (128)
+#define NO_SORTING (256)
+#define FORCE_MULTICOLUMN (512)
 
 #define MX_ADD_FLAG(params, flag) params = params | flag
 #define MX_DEL_FLAG(params, flag) params = params & ~flag
 #define MX_HAS_FLAG(params, flag) ((params & flag) == flag)
 
-#define USAGE "usage: uls [-AGRal] [file ...]\n"
+#define USAGE "usage: uls [-ACGRafl1] [file ...]\n"
 
 //ANSI color codes
 #define BLK   "\x1B[30m"

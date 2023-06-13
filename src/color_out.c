@@ -28,7 +28,12 @@ void mx_print_filename_colored(char *wd, char *filename) {
         free(dir_corected);
         dir_corected = mx_strjoin(wd, "/");
     }
-    char *fullpath = mx_strjoin(dir_corected, filename);
+    char *fullpath = NULL;
+    if (filename[0] != '/')
+            fullpath = mx_strjoin(dir_corected, filename);
+        else
+            fullpath = mx_strdup(filename);
+    
     free(dir_corected);
     int type = mx_get_filetype(fullpath);
     //mx_printint(type);

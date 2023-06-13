@@ -2,17 +2,19 @@
 
 void mx_display_dir(char *path, int flags) {
     DIR *cd = NULL;
-    //get terminal width
     
 
     struct dirent *entry = NULL;
     t_list *file_names = NULL;
-
     cd = opendir(path);
     if (cd == NULL) {
         mx_printerr("uls: ");
-        mx_printerr(path);
-        mx_printerr(": Cannot open directory");
+        char *s = mx_get_last_filename_in_path(path);
+        
+        mx_printerr(s);
+        free(s);
+        mx_printerr(": Permission denied\n");
+        return;
     }
     //add every item in dir to a list
     while ((entry = readdir(cd)) != NULL) {
@@ -30,16 +32,24 @@ void mx_display_dir(char *path, int flags) {
             entry = NULL;
             continue;
         }
-        mx_push_front(&file_names, mx_strdup(entry->d_name));
+        if (MX_HAS_FLAG(flags, NO_SORTING)) 
+            mx_push_back(&file_names, mx_strdup(entry->d_name));
+        else mx_push_front(&file_names, mx_strdup(entry->d_name));
         entry = NULL;
     }
     closedir(cd);
     //sort items
-    mx_list_strsort(file_names);
+    if (!MX_HAS_FLAG(flags, NO_SORTING))
+        mx_list_strsort(file_names);
     //output items
+    
     mx_auto_print(file_names, path,flags);
-   
-   mx_destroy_list_wdata(file_names);
+
+    int l_size = mx_list_size(file_names);
+    mx_destroy_list_wdata(file_names);
+    if (l_size == 0) return;
+
+    
 
 
     //for recursive directory calls
@@ -52,8 +62,11 @@ void mx_display_dir(char *path, int flags) {
     cd = opendir(path);
     if (cd == NULL) {
         mx_printerr("uls: ");
-        mx_printerr(path);
-        mx_printerr(": Cannot open directory");
+        char *s = mx_get_last_filename_in_path(path);
+        mx_printerr(s);
+        free(s);
+        mx_printerr(": Permission denied\n");
+
     }
     while ((entry = readdir(cd)) != NULL) {
 
@@ -68,18 +81,23 @@ void mx_display_dir(char *path, int flags) {
             (entry->d_name)[0] == '.') continue;
 
         //make full path of directory
-        char *tmparr[] = {path, "/", entry->d_name, NULL};
+        char *tmparr[4] =  {path, "/", entry->d_name, NULL};
+        if (path[mx_strlen(path) - 1] == '/'){
+            tmparr[1] = "";
+        } 
         char *newpath = mx_strarr_join(tmparr);
 
         if (!mx_is_dir(newpath)) {
             free(newpath);
             continue;
         }
-        mx_push_front(&dirs, newpath);
+        if (MX_HAS_FLAG(flags, NO_SORTING)) 
+            mx_push_back(&dirs, newpath);
+        else mx_push_front(&dirs, newpath);
         
         
     }
-    mx_list_strsort(dirs);
+    if (!MX_HAS_FLAG(flags, NO_SORTING)) mx_list_strsort(dirs);
 
     for (t_list *node = dirs; node != NULL; node = node->next) {
         char *path = (char *)(node->data);

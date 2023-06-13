@@ -1,5 +1,33 @@
 #include "../inc/uls.h"
 
+static time_t get_current_time() {
+    static bool is_set = false;
+    static time_t cur_time  = 0;
+    if (is_set == false) {
+        cur_time = time(NULL);
+        is_set = true;
+    }
+    return cur_time;
+}
+
+/* static struct stat cached_lstat(char *filepath) {
+    static char *current_file = NULL;
+    static struct stat statbuf;
+    if (current_file == NULL) {
+        current_file = filepath;
+        lstat(current_file, &statbuf);
+        return statbuf;
+    }
+    if (mx_strcmp(current_file, filepath) == 0) {
+        return statbuf;
+    }
+    else {
+        current_file = filepath;
+        lstat(current_file, &statbuf);
+        return statbuf;
+    }
+}
+*/
 
 static void append_to_str(char *str, char c) {
     int i = 0;
@@ -194,6 +222,7 @@ long long mx_get_size(char *filepath) {
     if (lstat(filepath, &statbuf) != 0) 
         return 0;
     return statbuf.st_size;
+    
 }
 
 t_date *mx_get_mod_date(char *filepath) {
@@ -210,8 +239,11 @@ t_date *mx_get_mod_date(char *filepath) {
     res->day_of_month = mx_strndup(fulldate + 8, 2);
     res->hour_and_minute = mx_strndup(fulldate + 11, 5);
     res->year = mx_strndup(fulldate + 20, 4);
+    char *tmp = mx_strjoin(" ", res->year);
+    free(res->year);
+    res->year = tmp;
 
-    long long time_diff = struct_time.tv_sec - time(NULL);
+    long long time_diff = struct_time.tv_sec - get_current_time();
     //comparing to half a year in seconds
     if ((time_diff > 60 * 60 * 24 * 182 && time_diff > 0)||
         (time_diff < -60 * 60 * 24 * 182 && time_diff < 0))

@@ -98,6 +98,7 @@ int mx_get_max_month_len(t_list *long_form_list);
 int mx_get_max_day_len(t_list *long_form_list);
 int mx_get_max_time_len(t_list *long_form_list);
 void mx_print_long_format(t_list *strings, char *wd, int flags);
+char *mx_get_last_filename_in_path(char *path);
 
 void mx_list_strsort(t_list *strings);
 void mx_list_sort_longf_entries(t_list *entries);

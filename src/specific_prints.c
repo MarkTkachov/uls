@@ -64,6 +64,7 @@ static void printllong(long long n) {
 }
 
 void mx_onecol_print(t_list *strings, char *wd, int flags) {
+    if (strings == NULL) return;
     if (MX_HAS_FLAG(flags, LONG_FORMAT)) {
         mx_print_long_format(strings, wd, flags);
         return;
@@ -80,6 +81,7 @@ void mx_onecol_print(t_list *strings, char *wd, int flags) {
 }
 
 void mx_multicol_print(t_list *strings, char *wd, char *separator, int scr_width, int flags) {
+    if (strings == NULL) return;
     int max_strlen = max_strlen_in_list(strings);
     int sep_len = mx_strlen(separator);
     //max number of columns
@@ -133,16 +135,25 @@ void mx_multicol_print(t_list *strings, char *wd, char *separator, int scr_width
 }
 
 void mx_auto_print(t_list *file_names, char *wd, int flags) {
+    if (file_names == NULL) return;
     struct winsize window;
-    int term_width = 0;
+    int term_width = 80;
     if (MX_HAS_FLAG(flags, TERM_OUTPUT)){
-        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &window) == -1) {
-            perror("uls");
-            exit(1);
+        
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &window) != -1) {
+            term_width = window.ws_col;
         }
-        term_width = window.ws_col;
+        else {
+            if (MX_HAS_FLAG(flags, FORCE_MULTICOLUMN)){
+                term_width = 80;
+            }
+            else {
+                perror("uls");
+                exit(1);
+            }
+        }
+        
     }
-
     if (MX_HAS_FLAG(flags, TERM_OUTPUT) && !MX_HAS_FLAG(flags, LONG_FORMAT)) 
         mx_multicol_print(file_names, wd, "   ", term_width, flags);
     else mx_onecol_print(file_names, wd, flags);
@@ -153,9 +164,12 @@ void mx_auto_print(t_list *file_names, char *wd, int flags) {
 }
 
 void mx_print_long_format(t_list *strings, char *wd, int flags) {
-    mx_printstr("total ");
-    printllong(mx_get_blocks_taken(strings, wd));
-    mx_printstr("\n");
+    if (strings == NULL) return;
+     if (!MX_HAS_FLAG(flags, NO_TOTAL_LONGF)) {
+        mx_printstr("total ");
+        printllong(mx_get_blocks_taken(strings, wd));
+        mx_printstr("\n");
+    }
 
     if (wd == NULL) wd = ".";
     char *dir_corected = mx_strdup(wd);
@@ -168,7 +182,13 @@ void mx_print_long_format(t_list *strings, char *wd, int flags) {
 
     for (t_list *n = strings; n != NULL; n = n->next) {
         char *filename = (char *)(n->data);
-        char *fullpath = mx_strjoin(dir_corected, filename);
+       // char *fullpath = mx_strjoin(dir_corected, filename);
+        char *fullpath = NULL;
+        if (filename[0] != '/')
+            fullpath = mx_strjoin(dir_corected, filename);
+        else
+            fullpath = mx_strdup(filename);
+        
         t_long_format *entry = malloc(sizeof(t_long_format));
         t_date *file_date = mx_get_mod_date(fullpath);
 
@@ -176,7 +196,36 @@ void mx_print_long_format(t_list *strings, char *wd, int flags) {
         entry->links = mx_itoa(mx_get_links_number(fullpath));
         entry->owner = mx_get_owner(fullpath);
         entry->group = mx_get_group(fullpath);
-        entry->size = mx_litoa(mx_get_size(fullpath));
+        long long size = mx_get_size(fullpath);
+
+        if (entry->modes[0] == 'b' || entry->modes[0] == 'c') {
+            entry->size = NULL;
+
+
+            struct stat statbuf;
+            if (lstat(fullpath, &statbuf) != 0) 
+                break;
+
+            char *min = mx_itoa(minor(statbuf.st_rdev));
+            char *maj = mx_itoa(major(statbuf.st_rdev));
+            char *spacer1 = mx_strnew(3);
+            for(int i = 2; i > mx_strlen(maj); i--){
+                spacer1[2 - i] = ' ';
+            }
+            char *spacer2 = mx_strnew(3);
+            for(int i = 3; i > mx_strlen(min); i--){
+                spacer2[3 - i] = ' ';
+            }
+            
+            char *tmparr[] = {spacer1, maj, ", ", spacer2, min, NULL};
+            entry->size = mx_strarr_join(tmparr);
+            free(min);
+            free(maj);
+            free(spacer1);
+            free(spacer2);
+        }
+        else
+            entry->size = mx_litoa(size);
         entry->month = mx_strdup(file_date->abbr_month);
         entry->day_of_month = mx_strdup(file_date->day_of_month);
         entry->time_or_year = file_date->is_far_in_time == false ? mx_strdup(file_date->hour_and_minute) : mx_strdup(file_date->year);
@@ -186,7 +235,9 @@ void mx_print_long_format(t_list *strings, char *wd, int flags) {
         else entry->symlink_follow = NULL;
 
         mx_free_date(file_date);
-        mx_push_front(&entries, entry); 
+        if (MX_HAS_FLAG(flags, NO_SORTING)) 
+            mx_push_back(&entries, entry);
+        else mx_push_front(&entries, entry); 
 
         free(fullpath);
     }

@@ -8,7 +8,7 @@ LIBS :=  ./libmx/libmx.a
 
 .PHONY = all clean uninstall reinstall
 
-CC = clang -std=c11  -Wall -Wextra -Werror -Wpedantic #compiler -std=c11
+CC = clang -std=c11   -Wall -Wextra -Werror -Wpedantic #compiler -std=c11
 
 SOURCE := $(wildcard src/*.c)
 

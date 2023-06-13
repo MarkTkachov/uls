@@ -1,7 +1,6 @@
 #include "../inc/uls.h"
 
-//flags to implement
-//l R G a A 
+
 
 int main(int argc, char *argv[]) {
     
@@ -16,45 +15,71 @@ int main(int argc, char *argv[]) {
         mx_display_dir(".", flags);
         return 0;
     }
+    
 
     t_list *reg_files = NULL;
     t_list *dir_files = NULL;
 
     t_list *file_args = NULL;
-    for (int i = files_start; i < argc; i++)
-        mx_push_front(&file_args, mx_strdup(argv[i]));
+    for (int i = files_start; i < argc; i++) {
+        
+        if (MX_HAS_FLAG(flags, NO_SORTING)) 
+            mx_push_back(&file_args, mx_strdup(argv[i]));
+        else mx_push_front(&file_args, mx_strdup(argv[i]));
+    }
+    
+        
 
-    mx_list_strsort(file_args);
-
+    if (!MX_HAS_FLAG(flags, NO_SORTING)) mx_list_strsort(file_args);
     //separate directories from regular files
     for (t_list *n = file_args; n != NULL; n = n->next) {
         char *f = (char *)(n->data);
+       
         if (!mx_file_exists(f)) {
+            
             char *tmparr[] = {"uls: ", f, NULL};
             char *tmp = mx_strarr_join(tmparr);
             perror(tmp);
             free(tmp);
             continue;
         }
+        
         if (mx_is_dir(f)) {
-            mx_push_front(&dir_files, mx_strdup(f));
+            
+            if (MX_HAS_FLAG(flags, NO_SORTING)) 
+                mx_push_back(&dir_files, mx_strdup(f));
+            else mx_push_front(&dir_files, mx_strdup(f));
         }
         else {
-            mx_push_front(&reg_files, mx_strdup(f));
+            if (MX_HAS_FLAG(flags, NO_SORTING)) 
+                mx_push_back(&reg_files, mx_strdup(f));
+            else mx_push_front(&reg_files, mx_strdup(f));
         }
+        
     }
     mx_destroy_list_wdata(file_args);
+
+    //for (t_list *n = reg_files; n != NULL; n = n->next) mx_printstr((char *)(n->data));
+
+    //for (t_list *n = dir_files; n != NULL; n = n->next) mx_printstr((char *)(n->data));
+
+    if (reg_files == NULL && dir_files == NULL) exit(1);
     
-    mx_list_strsort(reg_files);
-    mx_list_strsort(dir_files);
+    if (!MX_HAS_FLAG(flags, NO_SORTING)) {
+        mx_list_strsort(reg_files);
+        mx_list_strsort(dir_files);
+    }
+    
 
     //print regular files
     if (reg_files != NULL) {
         if (dir_files != NULL && !MX_HAS_FLAG(flags, RECURSIVE)) {
             MX_ADD_FLAG(flags, FORCE_NEWLINE_AFTER_PRINT);
         }
+        MX_ADD_FLAG(flags, NO_TOTAL_LONGF);
         mx_auto_print(reg_files, NULL, flags);
         MX_DEL_FLAG(flags, FORCE_NEWLINE_AFTER_PRINT);
+        MX_DEL_FLAG(flags, NO_TOTAL_LONGF);
 
        // mx_printstr("\n");
        if (dir_files != NULL) {
@@ -72,6 +97,7 @@ int main(int argc, char *argv[]) {
             mx_printstr((char *)(node->data));
             mx_printstr(":\n");
         }
+        
         mx_display_dir((char *)(node->data), flags);
         if (node->next != NULL) mx_printstr("\n");
     }
@@ -111,6 +137,17 @@ int mx_parse_flags(int argc, char *argv[argc], int *flags) {
                     break;
                 case 'A':
                     MX_ADD_FLAG(*flags, START_WITH_DOT);
+                    break;
+                case '1':
+                    MX_DEL_FLAG(*flags, TERM_OUTPUT);
+                    break;
+                case 'C':
+                    MX_ADD_FLAG(*flags, TERM_OUTPUT);
+                    MX_ADD_FLAG(*flags, FORCE_MULTICOLUMN);
+                    break;
+                case 'f':
+                    MX_ADD_FLAG(*flags, NO_SORTING);
+                    MX_ADD_FLAG(*flags, SHOW_DOT_DDOT);
                     break;
                 default: 
                     mx_printerr("uls: illegal option -- ");

@@ -50,7 +50,11 @@ quad_t mx_get_blocks_taken(t_list *files, char *wd) {
     
     for (t_list *n = files; n != NULL; n = n->next) {
         char *filename = (char *)(n->data);
-        char *fullpath = mx_strjoin(dir_corected, filename);
+        char *fullpath = NULL;
+        if (filename[0] != '/')
+            fullpath = mx_strjoin(dir_corected, filename);
+        else
+            fullpath = mx_strdup(filename);
         
         if (lstat(fullpath, &statbuf) == 0) {
             blocks += statbuf.st_blocks;
@@ -60,4 +64,17 @@ quad_t mx_get_blocks_taken(t_list *files, char *wd) {
     }
     free(dir_corected);
     return blocks;
+}
+
+static char *mx_strrchr(char *s, char c) {
+    for (int i = mx_strlen(s) - 1; i >= 0; i--) {
+        if (s[i] == c) return s + i;
+    }
+    return NULL;
+}
+
+char *mx_get_last_filename_in_path(char *path) {
+    char *slash = mx_strrchr(path, '/');
+    if (slash == NULL) return mx_strdup(path);
+    return mx_strdup(slash + 1);
 }
